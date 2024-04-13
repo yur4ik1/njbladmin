@@ -1,20 +1,17 @@
 import {BaseUrl} from "../../constants.js";
 import {getToken} from "../../getToken.js";
 
-export async function getDepartments(search) {
-    let variables = {}
-    
-    let whereQuery = '';
-    
-    if (search) {
-        whereQuery = `, title: {_ilike: "%${search}%"}`;
+export async function getJobs(departmentId) {
+    let variables = {
+        departmentId
     }
     
-    const query = `query readDepartments {
-         departments(where: {active: {_eq: true} ${whereQuery}}) {
-           title
+    const query = `query getJobs($departmentId: Int) {
+        jobs(where:{department_id:{_eq:$departmentId}})  {
             id
-         }
+            title
+            active
+        }
     }`;
     
     const data = JSON.stringify({query, variables});

@@ -10,6 +10,7 @@ import {getRewards} from "../utils/fetches/inventory/getRewards.js";
 import {performSearch} from "../utils/fetches/inventory/search.js";
 import ArchiveConfirmation from "../components/popups/archive-confirmation.jsx";
 import {editRewardStatus} from "../utils/fetches/inventory/editRewardStatus.js";
+import RewardPopup from "../components/popups/reward-popup.jsx";
 
 export const Route = createFileRoute('/inventory')({
     beforeLoad: ({context, location}) => {
@@ -37,6 +38,10 @@ const Inventory = () => {
     const [searchResults, setSearchResults] = useState([]);
     
     const [archivePopupRewardId, setArchivePopupRewardId] = useState();
+    
+    const [isAddRewardPopupActive, setIsAddRewardPopupActive] = useState(false);
+    
+    const [editRewardId, setEditRewardId] = useState(0);
     
     const handleChangeOrder = () => {
         setIsLoading(true);
@@ -88,6 +93,24 @@ const Inventory = () => {
         document.getElementById('search-input').value = '';
     }
     
+    const handleSave = () => {
+        setIsLoading(true);
+        setIsAddRewardPopupActive(!isAddRewardPopupActive);
+        getRewards(limit, offset, order, status, globalSearch).then((data) => {
+            setIsLoading(false);
+            setRewards(data.data.rewards);
+        });
+    }
+    
+    const handleSaveEdit = () => {
+        setIsLoading(true);
+        setEditRewardId(0);
+        getRewards(limit, offset, order, status, globalSearch).then((data) => {
+            setIsLoading(false);
+            setRewards(data.data.rewards);
+        });
+    }
+    
     useEffect(() => {
         getRewards(limit, offset, order, status, globalSearch).then((data) => {
             setIsLoading(false);
@@ -116,7 +139,7 @@ const Inventory = () => {
                         
                         <div className="content__section">
                             <div className="add-badge">
-                                <a className="add-revard-btn btn">Add Reward</a>
+                                <a onClick={() => setIsAddRewardPopupActive(!isAddRewardPopupActive)} className="add-revard-btn btn">Add Reward</a>
                             </div>
                             <div className="search__wrapper">
                                 <span className="search-icon">
@@ -214,11 +237,22 @@ const Inventory = () => {
                                         </div>
                                         <div className="cell">{reward.active !== true ? "Archived" : "Active"}</div>
                                         <div className="cell actions">
-                                            <span className="edit"></span>
+                                            <span onClick={() => setEditRewardId(reward.id)} className="edit"></span>
                                             <span onClick={() => setArchivePopupRewardId(reward.id)} className={`archive ${reward.active !== true && "deactivate"}`}></span>
                                             {archivePopupRewardId === reward.id && (
                                                 <ArchiveConfirmation handlerConfirm={() => handleArchiveReward(reward.id, !reward.active)} handlerReject={() => setArchivePopupRewardId(0)} />
                                             )}
+                                            {editRewardId === reward.id && <RewardPopup handler={handleSaveEdit} json={
+                                                {
+                                                    id: reward.id,
+                                                    title: reward.title,
+                                                    description: reward.description,
+                                                    size: reward.size,
+                                                    price: reward.price,
+                                                    status: reward.active,
+                                                    edit: true
+                                                }
+                                            } />}
                                         </div>
                                     </div>
                                 ))}
@@ -236,6 +270,8 @@ const Inventory = () => {
                     </section>
                 </section>
             </div>
+            
+            {isAddRewardPopupActive && <RewardPopup handler={handleSave} />}
         </MainLayout>
     );
 };

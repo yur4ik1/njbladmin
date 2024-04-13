@@ -88,14 +88,15 @@ const Positions = () => {
                                         </div>
                                         
                                         <div className="skills__archive-popup">
-                                            <p>Department can't be deactivated until you have at least one active
-                                                user
-                                                with this department.</p>
+                                            <p>
+                                                Department can't be deactivated until you have at least one active user
+                                                with this department.
+                                            </p>
                                         </div>
                                         
                                         <div className="add-job">
-                                            <button className="add-job-btn btn"
-                                                    onClick="openAddJobPopup('${da.id}')">Add Job
+                                            <button className="add-job-btn btn">
+                                                Add Job
                                             </button>
                                         </div>
                                     </div>

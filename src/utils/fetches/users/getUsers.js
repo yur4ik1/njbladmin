@@ -28,8 +28,21 @@ export async function getUsers(limit, offset, order, search, status) {
             role
             status
             active
-            manager_id
-            job_id
+            
+            users_manager {
+                id
+                firstname
+                lastname
+            }
+            users_job {
+                department_id
+                id
+                title
+            }
+            users_level {
+                id
+                title
+            }
         },
         users_aggregate(
             where:{

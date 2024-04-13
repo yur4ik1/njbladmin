@@ -7,6 +7,7 @@ import {useEffect, useState} from "react";
 import Loading from "../components/loading/Loading.jsx";
 import {getCompany} from "../utils/fetches/account-settings/getCompany.js";
 import {getAllUsers} from "../utils/fetches/account-settings/getAllUsers.js";
+import {saveSettings} from "../utils/fetches/account-settings/saveSettings.js";
 
 export const Route = createFileRoute('/')({
     beforeLoad: ({context, location}) => {
@@ -17,8 +18,23 @@ export const Route = createFileRoute('/')({
 
 function Home() {
     const [isLoading, setIsLoading] = useState(true);
+    const [btnLoading, setBtnLoading] = useState(false);
+    
     const [company, setCompany] = useState({});
     const [users, setUsers] = useState([{}]);
+    
+    const [isUserSelectActive, setIsUserSelectActive] = useState(false);
+    
+    const handleSave = (e) => {
+        e.preventDefault();
+        setBtnLoading(true);
+        setIsLoading(true);
+        
+        saveSettings(company).then(() => {
+            setBtnLoading(false);
+            setIsLoading(false);
+        });
+    }
     
     useEffect(() => {
         getCompany().then((data) => {
@@ -52,20 +68,27 @@ function Home() {
                                 <label>
                                     * Account Owner
                                     <div className="new__custom-select-wrapper">
-                                        <div className="new__custom-select ownerField">
+                                        <div className={`new__custom-select ownerField ${isUserSelectActive && 'open'}`}>
                                             <span className="line"></span>
                                             <div className="arrow"></div>
-                                            <div className="new__custom-select__trigger" id="searchInput" contentEditable={true} suppressContentEditableWarning={true}>
-                                                Type here to search for Clan...
+                                            <div onClick={() => setIsUserSelectActive(!isUserSelectActive)} className={`new__custom-select__trigger ${company.company_owner && 'selected-select-custom'}`} id="searchInput" contentEditable={true} suppressContentEditableWarning={true}>
+                                                {company.company_owner ? (`${company.company_owner.firstname} ${company.company_owner.lastname}`) : 'Type here to search for Owner...'}
                                             </div>
-                                            <div className="new__custom-options" id="selectOwner">
-                                                {users.map((user, index) => (
-                                                    <div key={index} className="new__custom-option" data-value={user.id}>
-                                                        {user.firstname} {user.lastname}
-                                                    </div>
-                                                ))}
-                                            </div>
-                                            <div className="custom-scrollbar ownerscroll"></div>
+                                            {isUserSelectActive && (
+                                                users.length > 0 && (
+                                                    <>
+                                                        <div className="new__custom-options" id="selectOwner">
+                                                            {users.map((user, index) => (
+                                                                <div key={index} className="new__custom-option"
+                                                                     data-value={user.id}>
+                                                                    {user.firstname} {user.lastname}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                        <div className="custom-scrollbar ownerscroll"></div>
+                                                    </>
+                                                )
+                                            )}
                                         </div>
                                     </div>
                                 </label>
@@ -76,7 +99,12 @@ function Home() {
                                 <div className="left">
                                     <h4>Company Information</h4>
                                     <label>* Company Name
-                                        <input type="text" placeholder="Company" id="companyName" defaultValue={company.name}/>
+                                        <input onChange={(e) => setCompany(
+                                            {
+                                                ...company,
+                                                name: e.target.value
+                                            }
+                                        )} type="text" placeholder="Company" id="companyName" defaultValue={company.name}/>
                                     </label>
                                     <div className="country">
                                         <label>* Country
@@ -95,7 +123,12 @@ function Home() {
                                     </div>
                                     <label>
                                         State
-                                        <input type="text" placeholder="DE" id="state" defaultValue={company.cstate}/>
+                                        <input onChange={(e) => setCompany(
+                                            {
+                                                ...company,
+                                                cstate: e.target.value
+                                            }
+                                        )} type="text" placeholder="DE" id="state" defaultValue={company.cstate}/>
                                     </label>
                                 </div>
                                 <div className="right">
@@ -105,26 +138,46 @@ function Home() {
                                     </label>
                                     <label>
                                         City
-                                        <input type="text" placeholder="Wilmington" id="city" defaultValue={company.city}/>
+                                        <input onChange={(e) => setCompany(
+                                            {
+                                                ...company,
+                                                city: e.target.value
+                                            }
+                                        )} type="text" placeholder="Wilmington" id="city" defaultValue={company.city}/>
                                     </label>
                                     <label>
                                         Zip
-                                        <input type="text" placeholder="123456" id="zip" defaultValue={company.zip}/>
+                                        <input onChange={(e) => setCompany(
+                                            {
+                                                ...company,
+                                                zip: e.target.value
+                                            }
+                                        )} type="text" placeholder="123456" id="zip" defaultValue={company.zip}/>
                                     </label>
                                 </div>
                             </div>
                             <div className="company-info address">
                                 <label>
                                     Address 1
-                                    <input type="text" placeholder="Gorodetskaya street, 8A" id="address1" defaultValue={company.address1}/>
+                                    <input onChange={(e) => setCompany(
+                                        {
+                                            ...company,
+                                            address1: e.target.value
+                                        }
+                                    )} type="text" placeholder="Gorodetskaya street, 8A" id="address1" defaultValue={company.address1}/>
                                 </label>
                                 <label>
                                     Address 2
-                                    <input type="text" placeholder="Gorodetskaya street, 8A" id="address2" defaultValue={company.address2}/>
+                                    <input onChange={(e) => setCompany(
+                                        {
+                                            ...company,
+                                            address2: e.target.value
+                                        }
+                                    )} type="text" placeholder="Gorodetskaya street, 8A" id="address2" defaultValue={company.address2}/>
                                 </label>
                             </div>
                             <div className="save-btn">
-                                <button className="btn" type="submit" id="btnSave">Save</button>
+                                <button onClick={handleSave} className={`btn ${btnLoading && 'btn-loading'}`} type="submit" id="btnSave">Save</button>
                             </div>
                             
                             {isLoading && (

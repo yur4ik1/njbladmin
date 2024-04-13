@@ -9,6 +9,8 @@ import AddUsers from "../components/popups/add-users.jsx";
 import {getUsers} from "../utils/fetches/users/getUsers.js";
 import {Helmet} from "react-helmet";
 import {performSearch} from "../utils/fetches/users/search.js";
+import ArchiveConfirmation from "../components/popups/archive-confirmation.jsx";
+import {editStatus} from "../utils/fetches/users/editStatus.js";
 
 export const Route = createFileRoute('/users')({
     beforeLoad: ({context, location}) => {
@@ -35,6 +37,9 @@ const Users = () => {
     
     const [users, setUsers] = useState([{}]);
     const [usersCount, setUsersCount] = useState(0);
+    
+    const [archivePopupId, setArchivePopupId] = useState(0);
+    const [editPopupId, setEditPopupId] = useState(0);
     
     const handleIsUsersPopupActive = () => {
         setIsUsersPopupActive(!isUsersPopupActive);
@@ -78,6 +83,28 @@ const Users = () => {
         setOrder(order === 'asc' ? 'desc' : 'asc');
         
         setIsLoading(true);
+    }
+    
+    const handleEditStatus = (id, status) => {
+        setIsLoading(true);
+        setArchivePopupId(0);
+        
+        editStatus(id, status).then(async (data) => {
+            if (data.data.update_users.affected_rows > 0) {
+                await setIsLoading(false);
+            }
+        });
+    }
+    
+    const handleCloseEditPopup = () => {
+        setEditPopupId(0);
+        setIsLoading(true);
+        
+        getUsers(limit, offset, order, globalSearch, statusActive).then(async (data) => {
+            setUsers(data.data.users);
+            setUsersCount(data.data.users_aggregate.aggregate.count);
+            await setIsLoading(false);
+        });
     }
     
     useEffect(() => {
@@ -125,7 +152,7 @@ const Users = () => {
                                                 <img src="/img/subscription__popup-close.svg" alt=""/>
                                             </button>
                                         )}
-                                        {searchResults.length > 0 && (
+                                        {(searchResults.length > 0 && search !== '') && (
                                             <div className="search-input-selector">
                                                 {searchResults.map((result, index) => (
                                                     <label onClick={() => handleGlobalSearch(result.lastname)} className="found_acievements" key={index}>
@@ -188,8 +215,8 @@ const Users = () => {
                                     <div className="cell">Actions</div>
                                 </div>
                                 
-                                {users && users.map((user, index) => (
-                                    <div key={index} className="row row-item">
+                                {users && users.map((user) => (
+                                    <div key={user.id} className="row row-item">
                                         <div className="cell id">{user.id}</div>
                                         <div className="cell name">{user.firstname} {user.lastname}</div>
                                         <div className="cell email">{user.email}</div>
@@ -199,12 +226,50 @@ const Users = () => {
                                             <span type="button"
                                                   className="edit edit-user-btn"
                                                   style={{border: "none", background: "none"}}
-                                                /*data-id="${item.id}"*/>
+                                                  onClick={() => setEditPopupId(user.id)}
+                                            >
                                             </span>
                                             <span
                                                 className={`archive ${user.status === 1 ? "" : "deactivate"}`}
+                                                onClick={() => setArchivePopupId(user.id)}
                                                 /*data-id="${item.id}" data-active="${item.active === true ? 1 : 0}"*/>
                                             </span>
+                                            
+                                            {archivePopupId === user.id && (
+                                                <ArchiveConfirmation handlerConfirm={() => handleEditStatus(
+                                                    user.id,
+                                                    user.status === 1 ? 0 : 1
+                                                )} handlerReject={() => setArchivePopupId(0)} />
+                                            )}
+                                            
+                                            {editPopupId === user.id && (
+                                                <AddUsers handler={handleCloseEditPopup} json={
+                                                    {
+                                                        id: user.id,
+                                                        name: user.firstname + ' ' + user.lastname,
+                                                        email: user.email,
+                                                        status: user.status === 1 ? 'Active' : 'Archived',
+                                                        
+                                                        
+                                                        role: user.role,
+                                                        
+                                                        departmentName: user.department ? user.department.name : '',
+                                                        
+                                                        jobId: user.users_job ? user.users_job.id : '',
+                                                        jobTitle: user.users_job ? user.users_job.title : null,
+                                                        
+                                                        levelId: user.users_level ? user.users_level.id : '',
+                                                        levelTitle: user.users_level ? user.users_level.title : '',
+                                                        
+                                                        managerId: user.users_manager ? user.users_manager.id : '',
+                                                        managerName: user.users_manager ? user.users_manager.firstname + ' ' + user.users_manager.lastname : '',
+                                                        
+                                                        departmentId: user.users_job ? user.users_job.department_id : '',
+                                                        
+                                                        edit: true
+                                                    }
+                                                }/>
+                                            )}
                                         </div>
                                     </div>
                                 ))}
