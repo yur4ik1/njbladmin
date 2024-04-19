@@ -8,6 +8,12 @@ import {useEffect, useState} from "react";
 import Loading from "../components/loading/Loading.jsx";
 import {getSkills} from "../utils/fetches/skills/getSkills.js";
 import {performSearch} from "../utils/fetches/skills/search.js";
+import SkillPopup from "../components/popups/skill-popup.jsx";
+import {updateTitle} from "../utils/fetches/skills/updateTitle.js";
+import ArchiveConfirmation from "../components/popups/archive-confirmation.jsx";
+import {editSkillStatus} from "../utils/fetches/skills/editSkillStatus.js";
+import AddSkillLevel from "../components/popups/add-skill-level.jsx";
+import {editSkillLevelStatus} from "../utils/fetches/skills/editSkillLevelStatus.js";
 
 export const Route = createFileRoute('/skills')({
     beforeLoad: ({context, location}) => {
@@ -31,6 +37,8 @@ const Skills = () => {
     const [searchResults, setSearchResults] = useState([]);
     
     const [globalSearch, setGlobalSearch] = useState('');
+    
+    const [isAddSkillPopupOpen, setIsAddSkillPopupOpen] = useState(false);
     
     const handleSearch = (search) => {
         performSearch(search, status).then((data) => {
@@ -61,7 +69,26 @@ const Skills = () => {
     const resetSearch = () => {
         document.getElementById('search-input').value = '';
         setSearch('');
+        setGlobalSearch('');
         setSearchResults([]);
+    }
+    
+    const handleAddSkill = () => {
+        setIsAddSkillPopupOpen(false);
+        
+        getSkills(limit, offset, status, globalSearch).then((data) => {
+            setIsLoading(false);
+            setSkills(data.data.skills);
+        });
+    }
+    
+    const handleChanges = () => {
+        setIsLoading(true);
+        
+        getSkills(limit, offset, status, globalSearch).then((data) => {
+            setIsLoading(false);
+            setSkills(data.data.skills);
+        });
     }
     
     useEffect(() => {
@@ -90,7 +117,7 @@ const Skills = () => {
                             <h2>SKILLS</h2>
                         </div>
                         <div className="add-skill">
-                            <a className="add-skill-btn btn">Add Skill</a>
+                            <a onClick={() => setIsAddSkillPopupOpen(true)} className="add-skill-btn btn">Add Skill</a>
                         </div>
                         <div className="search__wrapper">
                             <span className="search-icon">
@@ -147,7 +174,7 @@ const Skills = () => {
                         
                         <div id="skills-view">
                             {skills.map((skill) => (
-                                <Skill key={skill.id} skill={skill}/>
+                                <Skill key={skill.id} handlerOnChange={handleChanges} skill={skill}/>
                             ))}
                         </div>
                         
@@ -163,30 +190,92 @@ const Skills = () => {
                     </section>
                 </section>
             </div>
+            
+            {isAddSkillPopupOpen && <SkillPopup handler={handleAddSkill} />}
         </MainLayout>
     );
 };
 
 /* eslint-disable */
-const Skill = ({skill}) => {
+const Skill = ({skill, handlerOnChange}) => {
+    const [isEdit, setIsEdit] = useState(false);
+    
+    const [title, setTitle] = useState(skill.title);
+    
+    const [isArchivePopupActive, setIsArchivePopupActive] = useState(false);
+    
+    const [isLoading, setIsLoading] = useState(false);
+    
+    const [isAddSkillLevelPopupOpen, setIsAddSkillLevelPopupOpen] = useState(false);
+    
+    const saveName = () => {
+        setIsLoading(true);
+        updateTitle(skill.id, title).then(() => {
+            setIsEdit(false);
+            handlerOnChange();
+            setIsLoading(false);
+        });
+    }
+    
+    const handleEditBtn = () => {
+        if (isEdit) {
+            saveName()
+            setIsEdit(false);
+        } else {
+            setIsEdit(true);
+        }
+    }
+    
+    const handleEditStatus = (id, newStatus) => {
+        setIsLoading(true);
+        editSkillStatus(id, newStatus).then(() => {
+            handlerOnChange();
+            setIsArchivePopupActive(false);
+            setIsLoading(false);
+        })
+    }
+    
+    useEffect(() => {
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                saveName();
+            }
+        });
+    }, []);
+    
     return (
         <div className={"skill-item"}>
             <div className="department__wrapper">
                 <div className="department">
-                    <p className="department-field department-field-custom-style" type="text"
-                       contentEditable="false">
+                    <p
+                        className={`department-field department-field-custom-style ${isEdit ? "editableInput" : ""}`}
+                        type="text"
+                        contentEditable={isEdit}
+                        suppressContentEditableWarning={true}
+                        onInput={(e) => setTitle(e.target.innerText)}
+                    >
                         {skill.title}
                     </p>
-                    <button type="button" className="edit edit-skill-btn"
-                            style={{border: "none", background: "none"}}>
-                    
+                    <button
+                        type="button"
+                        className="edit edit-skill-btn"
+                        style={{border: "none", background: "none"}}
+                        onClick={handleEditBtn}
+                    >
                     </button>
-                    <a className={`archive ${skill.active === true ? "" : "Archived-statu"}`}
-                       href="#"></a>
+                    <a
+                        onClick={() => setIsArchivePopupActive(!isArchivePopupActive)}
+                        className={`archive ${skill.active ? "" : "Archived-statu"}`}
+                        href="#"
+                    >
+                    </a>
+                    
+                    {isArchivePopupActive && (<ArchiveConfirmation handlerReject={() => setIsArchivePopupActive(false)} handlerConfirm={() => handleEditStatus(skill.id, skill.active )} />)}
                 </div>
                 <div className="add-job">
                     {skill.skills_skills_levels.length < 6 ?
-                        (<button className="add-skills btn add-skills-btn">Add Skill’s
+                        (<button onClick={() => setIsAddSkillLevelPopupOpen(true)} className="add-skills btn add-skills-btn">Add Skill’s
                             Level</button>) :
                         (<button disabled={true} className="add-skills btn deactive-btn"
                                  style={{color: "#b9babe", background: "#fafcfb"}}>Add Skill’s
@@ -202,9 +291,8 @@ const Skill = ({skill}) => {
             </div>
             
             <div className="section__tags">
-                {skill.skills_skills_departments.map((department) => (
-                    <a href={'#'}
-                       key={department.id}>{department.skills_departments_department.title}</a>
+                {skill.skills_skills_departments.map((department, index) => (
+                    <a href={'#'} key={index}>{department.skills_departments_department.title}</a>
                 ))}
             </div>
             
@@ -221,33 +309,68 @@ const Skill = ({skill}) => {
                     </div>
                     
                     {skill.skills_skills_levels.map((level) => (
-                        <div className="row row-item" key={level.id}>
-                            <div className="cell name">{level.skills_levels_level.title}</div>
-                            <div className="cell desc">{level.description}</div>
-                            <div className="cell attribute">
-                                <div className="flex">
-                                    <div className="flex-start">
-                                        <img src="/img/power-2.png" alt=""
-                                             className="no-absolute"/>
-                                        <p className="no-absolute">Power</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div className="cell coins">{level.goal}</div>
-                            <div
-                                className="cell status">{level.status === 1 ? "Active" : "Archived"}</div>
-                            <div className="cell actions">
-                                <span className="edit edit-job-btn"></span>
-                                <span
-                                    className={`archive ${level.status === 1 ? "" : "Archived-statu"}`}></span>
-                            </div>
-                        </div>
+                        <Level key={level.id} level={level} handlerOnChange={handlerOnChange} />
                     ))}
                 </div>
             </div>
+            
+            {isAddSkillLevelPopupOpen && <AddSkillLevel handlerSave={handlerOnChange} handlerClose={() => setIsAddSkillLevelPopupOpen(!isAddSkillLevelPopupOpen)} id={skill.id} /> }
+            
+            {isLoading && <Loading/>}
         </div>
     );
 }
-/* eslint-enable */
+
 
 export default Skills;
+
+const Level = ({level, handlerOnChange}) => {
+    const [isEditPopupOpen, setIsEditPopupOpen] = useState(false);
+    const [isArchivePopupActive, setIsArchivePopupActive] = useState(false);
+    
+    const handleChangeStatus = (id, newStatus) => {
+        editSkillLevelStatus(id, newStatus).then(() => {
+            handlerOnChange();
+            setIsArchivePopupActive(false);
+        });
+        
+        handlerOnChange();
+    }
+    
+    return (
+        <div className="row row-item" key={level.id}>
+            <div className="cell name">{level.skills_levels_level.title}</div>
+            <div className="cell desc">{level.description}</div>
+            <div className="cell attribute">
+                <div className="flex">
+                    <div className="flex-start">
+                        <img src="/img/power-2.png" alt="" className="no-absolute"/>
+                        <p className="no-absolute">Power</p>
+                    </div>
+                </div>
+            </div>
+            <div className="cell coins">{level.goal}</div>
+            <div className="cell status">{level.status === 1 ? "Active" : "Archived"}</div>
+            <div className="cell actions">
+                <span onClick={() => setIsEditPopupOpen(!isEditPopupOpen)} className="edit edit-job-btn"></span>
+                <span onClick={() => setIsArchivePopupActive(!isArchivePopupActive)} className={`archive ${level.status === 1 ? "" : "Archived-statu"}`}></span>
+            </div>
+            
+            {isEditPopupOpen && <AddSkillLevel handlerClose={() => setIsEditPopupOpen(!isEditPopupOpen)} handlerSave={handlerOnChange} info={
+                {
+                    id: level.id,
+                    description: level.description,
+                    recipientCondition: level.goal,
+                    levelId: level.level_id,
+                    levelName: level.skills_levels_level.title,
+                    status: level.status === 1 ? "Active" : "Archived",
+                    edit: true
+                }
+            } /> }
+            
+            {isArchivePopupActive && (<ArchiveConfirmation handlerReject={() => setIsArchivePopupActive(false)} handlerConfirm={() => handleChangeStatus(level.id, level.status === 1 ? "Active" : "Archived")} />)}
+        </div>
+    );
+}
+
+/* eslint-enable */

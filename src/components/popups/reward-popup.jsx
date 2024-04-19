@@ -47,13 +47,11 @@ const RewardPopup = ({handler, json = {}}) => {
         
         if(form.edit) {
             editReward(form).then((response) => {
-                console.log(response)
                 setIsLoading(false)
                 handler();
             });
         } else {
             addReward(form).then((response) => {
-                console.log(response)
                 setIsLoading(false)
                 handler();
             });

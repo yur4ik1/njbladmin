@@ -10,6 +10,7 @@ import {getAchievements} from "../utils/fetches/achievements/getAchievements.js"
 import {performSearch} from "../utils/fetches/achievements/search.js";
 import ArchiveConfirmation from "../components/popups/archive-confirmation.jsx";
 import {editBadgeStatus} from "../utils/fetches/achievements/editBadgeStatus.js";
+import AchievementsPopup from "../components/popups/achievements-popup.jsx";
 
 export const Route = createFileRoute('/achievements')({
     beforeLoad: ({context, location}) => {
@@ -36,6 +37,10 @@ const Achievements = () => {
     const [globalSearch, setGlobalSearch] = useState('');
     
     const [isArchiveConfirmationActive, setIsArchiveConfirmationActive] = useState(0);
+    
+    const [isAddAchievementPopupActive, setIsAddAchievementPopupActive] = useState(false);
+    
+    const [isEditAchievementPopupId, setIsEditAchievementPopupId] = useState(0);
     
     const handleOrderChange = () => {
         setOrder(order === "asc" ? "desc" : "asc");
@@ -88,6 +93,27 @@ const Achievements = () => {
         document.querySelector("#search-input").value = '';
     }
     
+    const handleAddAchievement = () => {
+        setIsLoading(true);
+        setIsAddAchievementPopupActive(false);
+        
+        getAchievements(limit, offset, order, status, globalSearch).then((data) => {
+            setAchievements(data.data.badges);
+            setIsLoading(false);
+        });
+    }
+    
+    const handleEditAchievement = () => {
+        setIsLoading(true);
+        setIsAddAchievementPopupActive(false);
+        setIsEditAchievementPopupId(0);
+        
+        getAchievements(limit, offset, order, status, globalSearch).then((data) => {
+            setAchievements(data.data.badges);
+            setIsLoading(false);
+        });
+    }
+    
     useEffect(() => {
         const achievementsTitleIco = document.querySelector(".acievements-info"),
             achievementsTitlePopup = document.querySelector(".acievements-title");
@@ -125,7 +151,7 @@ const Achievements = () => {
                         
                         <div className="content__section">
                             <div className="add-badge">
-                                <a className="add-badge-btn btn">Add Badge</a>
+                                <a onClick={() => setIsAddAchievementPopupActive(!isAddAchievementPopupActive)} className="add-badge-btn btn">Add Badge</a>
                             </div>
                             <div className="search__wrapper">
                                 <span className="search-icon">
@@ -205,12 +231,26 @@ const Achievements = () => {
                                             {achievement.active ? "Active" : "Inactive"}
                                         </div>
                                         <div className="cell actions">
-                                            <span className="edit"></span>
+                                            <span onClick={() => setIsEditAchievementPopupId(achievement.id)} className="edit"></span>
                                             <span className={`archive ${achievement.active ? "" : " deactivate"}`} onClick={() => setIsArchiveConfirmationActive(achievement.id)}></span>
                                             
                                             {isArchiveConfirmationActive === achievement.id && (
                                                 <ArchiveConfirmation handlerReject={() => setIsArchiveConfirmationActive(0)} handlerConfirm={() => handleEditBadgeStatus(achievement.id, !achievement.active)} />
                                             )}
+                                            
+                                            {isEditAchievementPopupId === achievement.id && <AchievementsPopup handler={handleEditAchievement} json={
+                                                {
+                                                    edit: true,
+                                                    id: achievement.id,
+                                                    name: achievement.title,
+                                                    type: achievement.ctype,
+                                                    amount: achievement.camount,
+                                                    period: achievement.cperiod,
+                                                    badges: achievement.cbamount,
+                                                    reward: achievement.creward,
+                                                    status: achievement.active ? "Active" : "Inactive"
+                                                }
+                                            } />}
                                         </div>
                                     </div>
                                 ))}
@@ -228,6 +268,8 @@ const Achievements = () => {
                     </section>
                 </section>
             </div>
+            
+            {isAddAchievementPopupActive && <AchievementsPopup handler={handleAddAchievement} /> }
         </MainLayout>
     );
 };
