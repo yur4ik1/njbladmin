@@ -185,3 +185,7 @@
 .error {
     border: 1px solid red;
 }
+
+.editableInput {
+    pointer-events: all; border: 0.104vw solid rgb(228, 232, 238); width: 100%; padding-right: 2.086vw; margin-right: 15px;
+}
